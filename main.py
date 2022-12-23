@@ -1,18 +1,31 @@
-from pyasm import *
+from pyasm import *  # Used for generating assembly code
 
 
 def main(p):
-    # for i in range(10):
-    #     p.printf(str(i) + " ")
-    # p.puts("")
-    p.mov(r8, 10)
-    p.printreg(r8)
-    p.printf(" ")
-    p.printreg(r8)
-    # p.label("startofloop")
-    # p.puts("A")
-    # p.dec(r8)
-    # p.jnz("startofloop")
+    # Generate a basic program based of of example/for10.asm
+    fmt = p.variable(CONSTVAR, "%d ")
+    p.push(rbp)
+    p.lea(rbp, fmt)
+    p.push(rbx)
+    p.zero(ebx)
+    p.sub(rsp, 8)
+    loop = p.label()
+    p.mov(edx, ebx)
+    p.mov(rsi, rbp)
+    p.mov(edi, 1)
+    p.zero(eax)
+    p.call("__printf_chk")
+    p.add(ebx, 1)
+    p.cmp(ebx, 10)
+    p.jnz(loop)
+    p.mov(edi, 10)
+    p.call("putchar")
+    p.add(rsp, 8)
+    p.zero(eax)
+    p.pop(rbx)
+    p.pop(rbp)
+    p.ret()
+
 
     return 0
 

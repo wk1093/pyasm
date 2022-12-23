@@ -10,14 +10,19 @@ class AsmProgram:
         self.text = []      # Code
         self.externs = []   # External functions
         self._print_num = 0
-        self._rep_num = 0
+        self._var_num = 0
+        self._lbl_num = 0
         self.decvar = None
+        self.autostack = False # Automatically setup the stack with enter and leave
     def instruction(self, instruction: str, *args):
         """Adds an instruction to the .text section."""
         self.text.append("\t"+instruction + " " + ", ".join([str(a) for a in args]))
-    def label(self, label: str):
+    def label(self):
         """Adds a label to the .text section."""
-        self.text.append(label + ":")
+        name = "_lbl_" + str(self._lbl_num)
+        self.text.append(name + ":")
+        self._lbl_num += 1
+        return name
     def val2asm(self, val: any):
         data: str  # the assembly that represents the value
         if type(val) == int:  # dword
@@ -34,7 +39,8 @@ class AsmProgram:
         return data
 
 
-    def variable(self, name: str, type: int, value: any):
+    def variable(self, type: int, value: any):
+        name = "_var_" + str(self._var_num)
         data: str = self.val2asm(value)
         if type == INITVAR:
             self.data.append(name + " " + data)
@@ -42,13 +48,17 @@ class AsmProgram:
             self.rodata.append(name + " " + data)
         else:
             raise ValueError("Invalid variable type: " + str(type))
+        self._var_num += 1
+        return name
     
     def mov(self, dest: str, src: any):
         """Moves a value into a register."""
         self.instruction("mov", dest, src)
     
-    def call(self, func: str):
+    def call(self, func: str, auto_extern: bool = True):
         """Calls a function."""
+        if auto_extern and func not in self.externs:
+            self.externs.append(func)
         self.instruction("call", func)
     
     def loop(self, label: str):
@@ -74,6 +84,88 @@ class AsmProgram:
     def jnz(self, label: str):
         """Jumps to a label if the zero flag is not set."""
         self.instruction("jnz", label)
+    
+    def jz(self, label: str):
+        """Jumps to a label if the zero flag is set."""
+        self.instruction("jz", label)
+    
+    def jmp(self, label: str):
+        """Jumps to a label."""
+        self.instruction("jmp", label)
+    
+    def ret(self):
+        """Returns from a function."""
+        self.instruction("ret")
+    
+    def enter(self):
+        """Enters the stack."""
+        self.instruction("enter", 0, 0)
+    
+    def leave(self):
+        """Leaves the stack."""
+        self.instruction("leave")
+
+    def add(self, dest: str, src: str):
+        """Adds two registers."""
+        self.instruction("add", dest, src)
+    
+    def sub(self, dest: str, src: str):
+        """Subtracts two registers."""
+        self.instruction("sub", dest, src)
+    
+    def mul(self, dest: str, src: str):
+        """Multiplies two registers."""
+        self.instruction("mul", dest, src)
+    
+    def div(self, dest: str, src: str):
+        """Divides two registers."""
+        self.instruction("div", dest, src)
+    
+    def cmp(self, dest: str, src: str):
+        """Compares two registers."""
+        self.instruction("cmp", dest, src)
+    
+    def lea(self, dest: str, src: str):
+        """Loads the address of a register into another register."""
+        self.instruction("lea", dest, src)
+    
+    def xor(self, dest: str, src: str):
+        """Xors two registers."""
+        self.instruction("xor", dest, src)
+    
+    def iand(self, dest: str, src: str):
+        """Ands two registers."""
+        self.instruction("and", dest, src)
+    
+    def ior(self, dest: str, src: str):
+        """Ors two registers."""
+        self.instruction("or", dest, src)
+    
+    def inot(self, dest: str):
+        """NOTs a register."""
+        self.instruction("not", dest)
+    
+    def shl(self, dest: str, src: str):
+        """Shifts a register left."""
+        self.instruction("shl", dest, src)
+    
+    def shr(self, dest: str, src: str):
+        """Shifts a register right."""
+        self.instruction("shr", dest, src)
+    
+    def neg(self, dest: str):
+        """Negates a register."""
+        self.instruction("neg", dest)
+    
+    def div(self, dest: str, src: str):
+        """Integer divides two registers."""
+        self.instruction("idiv", dest, src)
+
+    def zero(self, dest: str):
+        """Zeros a register."""
+        self.xor(dest, dest)
+
+
     
     def printf(self, string: str):
         """Calls printf with the passed string."""
@@ -127,9 +219,11 @@ class AsmProgram:
             code += "\n\t\tsection .text\t;Code\n\n"
             code += "global main: function\t;Exposes main function\n"
             code += "main:\n"
-            code += "\tenter 0, 0\n\n"
+            if self.autostack:
+                code += "\tenter 0, 0\n\n"
             code += "\n".join(self.text) + "\n"
-            code += "\tleave\n"
+            if self.autostack:
+                code += "\tleave\n"
             code += "\tret\n"
         with open(self.name + ".asm", "w") as f:
             f.write(code)    
@@ -139,9 +233,9 @@ class AsmProgram:
             ret = 0
         ret = int(ret)
         if ret == 0:
-            self.instruction("\n\txor", "eax", "eax", "\t; return 0")
+            self.instruction("\n\txor", "eax", "eax\t; return 0")
         else:
-            self.instruction("\n\tmov", "eax", str(ret), "\t; return " + str(ret))
+            self.instruction("\n\tmov", "eax", str(ret) + "\t; return " + str(ret))
         
         self._cmp()
     def run(self, func, debug: bool = False):
