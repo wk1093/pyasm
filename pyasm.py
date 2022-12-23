@@ -11,6 +11,7 @@ class AsmProgram:
         self.externs = []   # External functions
         self._print_num = 0
         self._rep_num = 0
+        self.decvar = None
     def instruction(self, instruction: str, *args):
         """Adds an instruction to the .text section."""
         self.text.append("\t"+instruction + " " + ", ".join([str(a) for a in args]))
@@ -61,7 +62,18 @@ class AsmProgram:
     def pop(self, reg: str):
         """Pops a register off the stack."""
         self.instruction("pop", reg)
-        
+    
+    def dec(self, reg: str):
+        """Decrements a register."""
+        self.instruction("dec", reg)
+    
+    def inc(self, reg: str):
+        """Increments a register."""
+        self.instruction("inc", reg)
+    
+    def jnz(self, label: str):
+        """Jumps to a label if the zero flag is not set."""
+        self.instruction("jnz", label)
     
     def printf(self, string: str):
         """Calls printf with the passed string."""

@@ -5,12 +5,14 @@ def main(p):
     # for i in range(10):
     #     p.printf(str(i) + " ")
     # p.puts("")
-
-    p.mov(ecx, 10)
-    p.label("startofloop")
-    p.printf("A")
-    p.dec(ecx)
-    p.jnz("startofloop")
+    p.mov(r8, 10)
+    p.printreg(r8)
+    p.printf(" ")
+    p.printreg(r8)
+    # p.label("startofloop")
+    # p.puts("A")
+    # p.dec(r8)
+    # p.jnz("startofloop")
 
     return 0
 
